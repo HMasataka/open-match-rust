@@ -11,6 +11,7 @@ path = "src/main.rs"
 tonic = "0.12"
 prost = "0.13"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+prost-types = "0.13.3"
 
 [build-dependencies]
 tonic-build.workspace = true
