@@ -4,9 +4,10 @@ mod openmatch {
 
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use tonic::transport::Channel;
 
 use openmatch::frontend_service_client::FrontendServiceClient;
-use openmatch::{CreateTicketRequest, SearchFields, Ticket};
+use openmatch::{CreateTicketRequest, DeleteTicketRequest, GetTicketRequest, SearchFields, Ticket};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,14 +15,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ticket = create_new_ticket().unwrap();
     let req = tonic::Request::new(CreateTicketRequest {
-        ticket: Some(ticket),
+        ticket: Some(ticket.clone()),
     });
 
     let res = client.create_ticket(req).await?;
 
     println!("{:?}", res);
 
+    delete_on_assign(&mut client, res.get_ref().clone()).await;
+
     Ok(())
+}
+
+async fn delete_on_assign(client: &mut FrontendServiceClient<Channel>, ticket: Ticket) {
+    loop {
+        let got = client
+            .get_ticket(GetTicketRequest {
+                ticket_id: ticket.clone().id,
+            })
+            .await
+            .unwrap();
+
+        let res = got.get_ref().clone().assignment;
+
+        if res.is_some() {
+            println!("{:?}", res);
+            break;
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
+    let d = client
+        .delete_ticket(DeleteTicketRequest {
+            ticket_id: ticket.clone().id,
+        })
+        .await
+        .unwrap();
+
+    println!("{:?}", d);
 }
 
 fn create_new_ticket() -> Result<Ticket, Box<dyn std::error::Error>> {
