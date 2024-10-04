@@ -3,7 +3,6 @@ mod openmatch {
 }
 
 use rand::seq::SliceRandom;
-use std::collections::HashMap;
 use tokio::task::JoinSet;
 use tonic::transport::Channel;
 
@@ -18,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..20 {
         let mut client = client.clone();
 
-        let ticket = create_new_ticket().unwrap();
+        let ticket = create_new_ticket();
         let req = tonic::Request::new(CreateTicketRequest {
             ticket: Some(ticket.clone()),
         });
@@ -66,19 +65,14 @@ async fn delete_on_assign(client: &mut FrontendServiceClient<Channel>, ticket: T
     println!("{:?}", d);
 }
 
-fn create_new_ticket() -> Result<Ticket, Box<dyn std::error::Error>> {
-    Ok(Ticket {
-        id: "1".to_string(),
-        assignment: None,
+fn create_new_ticket() -> Ticket {
+    Ticket {
         search_fields: Some(SearchFields {
-            double_args: HashMap::new(),
-            string_args: HashMap::new(),
             tags: game_mode(),
+            ..Default::default()
         }),
-        persistent_field: HashMap::new(),
-        extensions: HashMap::new(),
-        create_time: None,
-    })
+        ..Default::default()
+    }
 }
 
 fn game_mode() -> Vec<String> {
