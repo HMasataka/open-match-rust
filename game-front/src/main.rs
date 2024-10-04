@@ -4,6 +4,7 @@ mod openmatch {
 
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use tokio::task::JoinSet;
 use tonic::transport::Channel;
 
 use openmatch::frontend_service_client::FrontendServiceClient;
@@ -11,18 +12,27 @@ use openmatch::{CreateTicketRequest, DeleteTicketRequest, GetTicketRequest, Sear
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = FrontendServiceClient::connect("http://[::1]:50504").await?;
+    let client = FrontendServiceClient::connect("http://[::1]:50504").await?;
+    let mut set = JoinSet::new();
 
-    let ticket = create_new_ticket().unwrap();
-    let req = tonic::Request::new(CreateTicketRequest {
-        ticket: Some(ticket.clone()),
-    });
+    for _ in 0..20 {
+        let mut client = client.clone();
 
-    let res = client.create_ticket(req).await?;
+        let ticket = create_new_ticket().unwrap();
+        let req = tonic::Request::new(CreateTicketRequest {
+            ticket: Some(ticket.clone()),
+        });
 
-    println!("{:?}", res);
+        let res = client.create_ticket(req).await?;
 
-    delete_on_assign(&mut client, res.get_ref().clone()).await;
+        println!("{:?}", res);
+
+        set.spawn(async move {
+            delete_on_assign(&mut client, res.get_ref().clone()).await;
+        });
+    }
+
+    set.join_all().await;
 
     Ok(())
 }
