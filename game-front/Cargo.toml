@@ -3,8 +3,8 @@ name = "game-front"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]] # Bin to run the HelloWorld gRPC server
-name = "match-function"
+[[bin]]
+name = "game-front"
 path = "src/main.rs"
 
 [dependencies]
