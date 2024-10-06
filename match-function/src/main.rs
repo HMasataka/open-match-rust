@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server = MMFServer {};
     Server::builder()
         .add_service(MatchFunctionServer::new(server))
-        .serve("[::1]:50051".parse()?)
+        .serve("[::1]:50502".parse()?)
         .await?;
 
     Ok(())
