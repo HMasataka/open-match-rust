@@ -486,6 +486,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "match-function-client"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

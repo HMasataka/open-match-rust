@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["game-front", "match-function"]
+members = ["game-front", "match-function", "match-function-client"]
 
 [workspace.dependencies]
 tonic-build = "0.12"
