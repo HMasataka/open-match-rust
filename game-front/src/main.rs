@@ -9,9 +9,11 @@ use tonic::transport::Channel;
 use openmatch::frontend_service_client::FrontendServiceClient;
 use openmatch::{CreateTicketRequest, DeleteTicketRequest, GetTicketRequest, SearchFields, Ticket};
 
+const OM_FRONTEND_ENDPOINT: &str = "http://open-match-frontend.open-match.svc.cluster.local:50504";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = FrontendServiceClient::connect("http://[::1]:50504").await?;
+    let client = FrontendServiceClient::connect(OM_FRONTEND_ENDPOINT).await?;
     let mut set = JoinSet::new();
 
     for _ in 0..20 {

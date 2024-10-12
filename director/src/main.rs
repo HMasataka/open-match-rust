@@ -9,13 +9,14 @@ use openmatch::{
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 
-const OM_BACKEND_ENDPOINT: &str = "open-match-backend.open-match.svc.cluster.local:50505";
-const FUNCTION_HOST_NAME: &str = "open-match-matchfunction.open-match.svc.cluster.local";
+const OM_BACKEND_ENDPOINT: &str = "http://open-match-backend.open-match.svc.cluster.local:50505";
+const FUNCTION_HOST_NAME: &str =
+    "http://open-match-rust-match-function.open-match.svc.cluster.local";
 const FUNCTION_PORT: i32 = 50502;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = BackendServiceClient::connect("http://[::1]:50505").await?;
+    let client = BackendServiceClient::connect(OM_BACKEND_ENDPOINT).await?;
 
     let profiles = generate_profiles();
 

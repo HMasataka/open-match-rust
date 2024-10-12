@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: open-match-rust-match-function
+  namespace: open-match
+  labels:
+    app: open-match
+    component: match-function
+spec:
+  containers:
+    - name: open-match-rust-match-function
+      image: open-match-rust-match-function
+  hostname: open-match-rust-match-function
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: open-match-rust-match-function
+  namespace: open-match
+  labels:
+    app: open-match
+    component: match-function
+spec:
+  selector:
+    app: open-match
+    component: match-function
+  clusterIP: None
+  type: ClusterIP
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 50502

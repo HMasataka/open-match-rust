@@ -1,0 +1,38 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+build:
+  local:
+    push: false
+    useBuildkit: true
+  artifacts:
+    - image: open-match-rust-director
+      context: .
+      docker:
+        dockerfile: ./director/Dockerfile
+    - image: open-match-rust-game-front
+      context: .
+      docker:
+        dockerfile: ./game-front/Dockerfile
+    - image: open-match-rust-match-function
+      context: .
+      docker:
+        dockerfile: ./match-function/Dockerfile
+deploy:
+  kubectl:
+    defaultNamespace: open-match
+manifests:
+  rawYaml:
+    - ./director/director.yaml
+    - ./game-front/game-front.yaml
+    - ./match-function/match-function.yaml
+portForward:
+  - resourceType: Service
+    resourceName: open-match-frontend
+    namespace: open-match
+    port: 50504
+    localPort: 50504
+  - resourceType: Service
+    resourceName: open-match-backend
+    namespace: open-match
+    port: 50505
+    localPort: 50505

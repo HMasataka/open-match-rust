@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: open-match-rust-director
+  namespace: open-match
+spec:
+  containers:
+    - name: open-match-rust-director
+      image: open-match-rust-director
+  hostname: open-match-rust-director
