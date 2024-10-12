@@ -41,7 +41,7 @@ async fn main() -> Result<(), SpanErr<DirectorError>> {
 
     let client = BackendServiceClient::connect(OM_BACKEND_ENDPOINT)
         .await
-        .map_err(DirectorError::CreateGrpcClientListener)?;
+        .map_err(DirectorError::CreateGrpcClient)?;
 
     let profiles = generate_profiles();
 
