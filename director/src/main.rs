@@ -3,6 +3,8 @@ mod openmatch {
 }
 mod err;
 
+use std::time::Duration;
+
 use err::DirectorError;
 use openmatch::{
     backend_service_client::BackendServiceClient, function_config, FetchMatchesRequest,
@@ -57,10 +59,12 @@ async fn main() -> Result<(), SpanErr<DirectorError>> {
             set.spawn(async move {
                 let mut client = client.clone();
                 let _matches = match fetch(&mut client, profile).await {
-                    Ok(m) => print!("{:?}", m),
-                    Err(e) => print!("{:?}", e),
+                    Ok(m) => println!("{:?}", m),
+                    Err(e) => println!("{:?}", e),
                 };
             });
+
+            tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     }
 

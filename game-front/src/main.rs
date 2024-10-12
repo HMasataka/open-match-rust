@@ -2,6 +2,8 @@ mod openmatch {
     tonic::include_proto!("openmatch");
 }
 
+use std::time::Duration;
+
 use rand::seq::SliceRandom;
 use tokio::task::JoinSet;
 use tonic::transport::Channel;
@@ -31,6 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         set.spawn(async move {
             delete_on_assign(&mut client, res.get_ref().clone()).await;
         });
+
+        tokio::time::sleep(Duration::from_millis(1000)).await;
     }
 
     set.join_all().await;
