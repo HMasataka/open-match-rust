@@ -8,6 +8,7 @@ use openmatch::{
     backend_service_client::BackendServiceClient, function_config, FetchMatchesRequest,
     FunctionConfig, Match, MatchProfile, Pool, TagPresentFilter,
 };
+use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use tracing::instrument;
@@ -38,6 +39,7 @@ fn initialize_tracing_subscriber() -> Result<(), SpanErr<DirectorError>> {
 #[instrument(skip_all, name = "main", level = "trace")]
 async fn main() -> Result<(), SpanErr<DirectorError>> {
     initialize_tracing_subscriber()?;
+    let mut set = JoinSet::new();
 
     let client = BackendServiceClient::connect(OM_BACKEND_ENDPOINT)
         .await
@@ -45,13 +47,24 @@ async fn main() -> Result<(), SpanErr<DirectorError>> {
 
     let profiles = generate_profiles();
 
-    for profile in profiles {
-        let mut client = client.clone();
-        let matches = fetch(&mut client, profile).await?;
+    for _ in 0..20 {
+        let profiles = profiles.clone();
+        let client = client.clone();
 
-        let mut client = client.clone();
-        assign(&mut client, matches).await?;
+        for profile in profiles {
+            let client = client.clone();
+
+            set.spawn(async move {
+                let mut client = client.clone();
+                let _matches = match fetch(&mut client, profile).await {
+                    Ok(m) => print!("{:?}", m),
+                    Err(e) => print!("{:?}", e),
+                };
+            });
+        }
     }
+
+    set.join_all().await;
 
     Ok(())
 }
