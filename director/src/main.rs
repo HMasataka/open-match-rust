@@ -1,39 +1,66 @@
 mod openmatch {
     tonic::include_proto!("openmatch");
 }
+mod err;
 
+use err::DirectorError;
 use openmatch::{
     backend_service_client::BackendServiceClient, function_config, FetchMatchesRequest,
     FunctionConfig, Match, MatchProfile, Pool, TagPresentFilter,
 };
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
+use tracing::instrument;
+use tracing_error::ErrorLayer;
+use tracing_spanned::SpanErr;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 const OM_BACKEND_ENDPOINT: &str = "http://open-match-backend.open-match.svc.cluster.local:50505";
 const FUNCTION_HOST_NAME: &str = "http://match-function.open-match.svc.cluster.local";
 const FUNCTION_PORT: i32 = 50502;
 
+#[instrument(skip_all, name = "initialize_tracing_subscriber", level = "trace")]
+fn initialize_tracing_subscriber() -> Result<(), SpanErr<DirectorError>> {
+    tracing_subscriber::Registry::default()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+        )
+        .with(ErrorLayer::default())
+        .try_init()
+        .map_err(DirectorError::InitializeTracingSubscriber)?;
+
+    Ok(())
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = BackendServiceClient::connect(OM_BACKEND_ENDPOINT).await?;
+#[instrument(skip_all, name = "main", level = "trace")]
+async fn main() -> Result<(), SpanErr<DirectorError>> {
+    initialize_tracing_subscriber()?;
+
+    let client = BackendServiceClient::connect(OM_BACKEND_ENDPOINT)
+        .await
+        .map_err(DirectorError::CreateGrpcClientListener)?;
 
     let profiles = generate_profiles();
 
     for profile in profiles {
         let mut client = client.clone();
-        let matches = fetch(&mut client, profile).await.unwrap();
+        let matches = fetch(&mut client, profile).await?;
 
         let mut client = client.clone();
-        assign(&mut client, matches).await.unwrap();
+        assign(&mut client, matches).await?;
     }
 
     Ok(())
 }
 
+#[instrument(skip_all, name = "fetch", level = "trace")]
 async fn fetch(
     be: &mut BackendServiceClient<Channel>,
     p: MatchProfile,
-) -> Result<Vec<Match>, Box<dyn std::error::Error>> {
+) -> Result<Vec<Match>, SpanErr<DirectorError>> {
     let req = FetchMatchesRequest {
         config: Some(FunctionConfig {
             host: FUNCTION_HOST_NAME.to_string(),
@@ -44,7 +71,12 @@ async fn fetch(
     };
 
     let mut be = be.clone();
-    let mut stream = be.fetch_matches(req).await.unwrap();
+
+    let mut stream = be
+        .fetch_matches(req)
+        .await
+        .map_err(DirectorError::InvalidTonicStatus)?;
+
     let stream = stream.get_mut();
 
     let mut matches = Vec::new();
@@ -63,13 +95,15 @@ async fn fetch(
     Ok(matches)
 }
 
+#[instrument(skip_all, name = "assign", level = "trace")]
 async fn assign(
     _be: &mut BackendServiceClient<Channel>,
     _matches: Vec<Match>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), SpanErr<DirectorError>> {
     Ok(())
 }
 
+#[instrument(skip_all, name = "generate_profiles", level = "trace")]
 fn generate_profiles() -> Vec<MatchProfile> {
     let mut profiles = Vec::new();
     let modes = vec!["mode.demo", "mode.ctf", "mode.battleroyale"];
