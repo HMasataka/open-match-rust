@@ -3,6 +3,7 @@ mod openmatch {
 }
 mod err;
 
+use std::net::SocketAddr;
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -94,14 +95,16 @@ fn initialize_tracing_subscriber() -> Result<(), SpanErr<MatchFunctionError>> {
 async fn main() -> Result<(), SpanErr<MatchFunctionError>> {
     initialize_tracing_subscriber()?;
 
-    let addr = "[::1]:50502";
+    let addr = "[::0]:50502"
+        .parse::<SocketAddr>()
+        .map_err(MatchFunctionError::FailedAddrParse)?;
     let server = MMFServer {};
 
     println!("{}", addr);
 
     Server::builder()
         .add_service(MatchFunctionServer::new(server))
-        .serve(addr.parse().map_err(MatchFunctionError::FailedAddrParse)?)
+        .serve(addr)
         .await
         .map_err(MatchFunctionError::FailToService)?;
 
