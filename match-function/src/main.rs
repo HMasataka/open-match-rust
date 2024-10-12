@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::time::Duration;
 
 use openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
-use openmatch::{RunRequest, RunResponse};
+use openmatch::{Match, RunRequest, RunResponse};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
@@ -26,8 +26,7 @@ impl MatchFunction for MMFServer {
     async fn run(&self, request: Request<RunRequest>) -> RunResult<Self::RunStream> {
         println!("Got a request from {:?}", request.remote_addr());
 
-        let mut replies = Vec::new();
-        replies.push(RunResponse { proposal: None });
+        let replies = make_matches();
 
         let mut stream = Box::pin(tokio_stream::iter(replies).throttle(Duration::from_millis(200)));
 
@@ -50,6 +49,21 @@ impl MatchFunction for MMFServer {
 
         Ok(Response::new(Box::pin(output_stream) as Self::RunStream))
     }
+}
+
+fn make_matches() -> Vec<RunResponse> {
+    let mut replies = Vec::new();
+
+    for i in 1..4 {
+        replies.push(RunResponse {
+            proposal: Some(Match {
+                match_id: format!("{}", i),
+                ..Default::default()
+            }),
+        });
+    }
+
+    return replies;
 }
 
 #[tokio::main]
