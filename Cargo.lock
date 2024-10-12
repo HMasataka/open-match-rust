@@ -528,10 +528,15 @@ dependencies = [
  "prost",
  "prost-types",
  "rand",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "tonic",
  "tonic-build",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
+ "tracing_spanned",
 ]
 
 [[package]]

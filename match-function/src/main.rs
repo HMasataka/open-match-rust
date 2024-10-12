@@ -1,10 +1,12 @@
 mod openmatch {
     tonic::include_proto!("openmatch");
 }
+mod err;
 
 use std::pin::Pin;
 use std::time::Duration;
 
+use err::MatchFunctionError;
 use openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
 use openmatch::{Match, RunRequest, RunResponse};
 use tokio::sync::mpsc;
@@ -12,6 +14,10 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use tracing::instrument;
+use tracing_error::ErrorLayer;
+use tracing_spanned::SpanErr;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 #[derive(Default)]
 pub struct MMFServer {}
@@ -66,13 +72,36 @@ fn make_matches() -> Vec<RunResponse> {
     return replies;
 }
 
+#[instrument(skip_all, name = "initialize_tracing_subscriber", level = "trace")]
+fn initialize_tracing_subscriber() -> Result<(), SpanErr<MatchFunctionError>> {
+    tracing_subscriber::Registry::default()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+        )
+        .with(ErrorLayer::default())
+        .try_init()
+        .map_err(MatchFunctionError::InitializeTracingSubscriber)?;
+
+    Ok(())
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[instrument(skip_all, name = "main", level = "trace")]
+async fn main() -> Result<(), SpanErr<MatchFunctionError>> {
+    initialize_tracing_subscriber()?;
+
+    let addr = "[::1]:50502";
     let server = MMFServer {};
+
+    println!("{}", addr);
+
     Server::builder()
         .add_service(MatchFunctionServer::new(server))
-        .serve("[::1]:50502".parse()?)
-        .await?;
+        .serve(addr.parse().map_err(MatchFunctionError::FailedAddrParse)?)
+        .await
+        .map_err(MatchFunctionError::FailToService)?;
 
     Ok(())
 }
