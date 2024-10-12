@@ -1,5 +1,3 @@
-use std::io;
-
 use thiserror::Error;
 use tracing_subscriber::util::TryInitError;
 
