@@ -29,6 +29,7 @@ type ResponseStream = Pin<Box<dyn Stream<Item = Result<RunResponse, Status>> + S
 impl MatchFunction for MMFServer {
     type RunStream = ResponseStream;
 
+    #[instrument(skip_all, name = "run", level = "trace")]
     async fn run(&self, request: Request<RunRequest>) -> RunResult<Self::RunStream> {
         println!("Got a request from {:?}", request.remote_addr());
 
@@ -57,6 +58,7 @@ impl MatchFunction for MMFServer {
     }
 }
 
+#[instrument(skip_all, name = "make_matches", level = "trace")]
 fn make_matches() -> Vec<RunResponse> {
     let mut replies = Vec::new();
 
