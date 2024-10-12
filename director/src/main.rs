@@ -10,8 +10,7 @@ use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 
 const OM_BACKEND_ENDPOINT: &str = "http://open-match-backend.open-match.svc.cluster.local:50505";
-const FUNCTION_HOST_NAME: &str =
-    "http://open-match-rust-match-function.open-match.svc.cluster.local";
+const FUNCTION_HOST_NAME: &str = "http://match-function.open-match.svc.cluster.local";
 const FUNCTION_PORT: i32 = 50502;
 
 #[tokio::main]

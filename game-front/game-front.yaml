@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: open-match-rust-game-front
+  name: game-front
   namespace: open-match
 spec:
   containers:
-    - name: open-match-rust-game-front
+    - name: game-front
       image: open-match-rust-game-front
-  hostname: open-match-rust-game-front
+  hostname: game-front

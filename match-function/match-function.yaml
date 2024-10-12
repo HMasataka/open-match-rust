@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: open-match-rust-match-function
+  name: match-function
   namespace: open-match
   labels:
     app: open-match
     component: match-function
 spec:
   containers:
-    - name: open-match-rust-match-function
+    - name: match-function
       image: open-match-rust-match-function
-  hostname: open-match-rust-match-function
+  hostname: match-function
 ---
 kind: Service
 apiVersion: v1
 metadata:
-  name: open-match-rust-match-function
+  name: match-function
   namespace: open-match
   labels:
     app: open-match
