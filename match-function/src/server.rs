@@ -40,13 +40,13 @@ impl MatchFunction for MMFServer {
 
         let mut client = QueryServiceClient::connect(OM_QUERY_ENDPOINT)
             .await
-            .map_err(|_| Status::unknown(""))?;
+            .map_err(|_| Status::unknown("create client error"))?;
 
         let tickets = self
             .query
             .query_pool(&mut client)
             .await
-            .map_err(|_| Status::unknown(""))?;
+            .map_err(|_| Status::unknown("get tickets error"))?;
         println!("{:?}", tickets);
 
         let replies = make_matches();
