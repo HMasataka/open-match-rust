@@ -1,6 +1,7 @@
 use std::net::AddrParseError;
 
 use thiserror::Error;
+use tonic::Status;
 use tracing_subscriber::util::TryInitError;
 
 #[derive(Error, Debug)]
@@ -11,4 +12,8 @@ pub enum MatchFunctionError {
     InitializeTracingSubscriber(TryInitError),
     #[error("addr parse failed. err: {0}")]
     FailedAddrParse(AddrParseError),
+    #[error("initialize client error. err: {0}")]
+    ClientConnect(tonic::transport::Error),
+    #[error("receive query ticket error. err: {0}")]
+    ReceiveQueryTickets(Status),
 }
