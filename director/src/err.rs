@@ -9,4 +9,6 @@ pub enum DirectorError {
     CreateGrpcClient(tonic::transport::Error),
     #[error("invalid tonic status. status: {0}")]
     InvalidTonicStatus(tonic::Status),
+    #[error("assign error. status: {0}")]
+    FailedToAssign(tonic::Status),
 }

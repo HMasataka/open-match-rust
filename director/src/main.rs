@@ -7,8 +7,9 @@ use std::time::Duration;
 
 use err::DirectorError;
 use openmatch::{
-    backend_service_client::BackendServiceClient, function_config, FetchMatchesRequest,
-    FunctionConfig, Match, MatchProfile, Pool, TagPresentFilter,
+    backend_service_client::BackendServiceClient, function_config, AssignTicketsRequest,
+    Assignment, AssignmentGroup, FetchMatchesRequest, FunctionConfig, Match, MatchProfile, Pool,
+    TagPresentFilter,
 };
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
@@ -58,8 +59,14 @@ async fn main() -> Result<(), SpanErr<DirectorError>> {
 
             set.spawn(async move {
                 let mut client = client.clone();
-                let _matches = match fetch(&mut client, profile).await {
-                    Ok(m) => println!("{:?}", m),
+                let matches = match fetch(&mut client, profile).await {
+                    Ok(m) => m,
+                    Err(_) => Vec::<Match>::new(),
+                };
+
+                let mut client = client.clone();
+                let _ = match assign(&mut client, matches).await {
+                    Ok(_) => println!("ok"),
                     Err(e) => println!("{:?}", e),
                 };
             });
@@ -114,9 +121,34 @@ async fn fetch(
 
 #[instrument(skip_all, name = "assign", level = "trace")]
 async fn assign(
-    _be: &mut BackendServiceClient<Channel>,
-    _matches: Vec<Match>,
+    be: &mut BackendServiceClient<Channel>,
+    matches: Vec<Match>,
 ) -> Result<(), SpanErr<DirectorError>> {
+    for m in matches {
+        let mut ticket_ids = Vec::<String>::new();
+        for ticket in m.tickets {
+            ticket_ids.push(ticket.id);
+        }
+
+        let conn = format!("{}.{}.{}.{}:2222", 256, 256, 256, 256);
+
+        let req = AssignTicketsRequest {
+            assignments: vec![AssignmentGroup {
+                ticket_ids: ticket_ids,
+                assignment: Some(Assignment {
+                    connection: conn,
+                    ..Default::default()
+                }),
+            }],
+        };
+
+        let mut be = be.clone();
+
+        be.assign_tickets(req)
+            .await
+            .map_err(DirectorError::FailedToAssign)?;
+    }
+
     Ok(())
 }
 
