@@ -2,6 +2,7 @@ mod openmatch {
     tonic::include_proto!("openmatch");
 }
 mod err;
+mod query;
 mod server;
 mod trace;
 
