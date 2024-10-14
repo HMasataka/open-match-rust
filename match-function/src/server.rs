@@ -1,9 +1,9 @@
 use std::pin::Pin;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use crate::openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
 use crate::openmatch::query_service_client::QueryServiceClient;
-use crate::openmatch::{Match, RunRequest, RunResponse};
+use crate::openmatch::{Match, MatchProfile, RunRequest, RunResponse, Ticket};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
@@ -47,9 +47,8 @@ impl MatchFunction for MMFServer {
             .query_pool(&mut client)
             .await
             .map_err(|_| Status::unknown("get tickets error"))?;
-        println!("{:?}", tickets);
 
-        let replies = make_matches();
+        let replies = make_matches(request.get_ref().profile.clone(), tickets);
 
         let mut stream = Box::pin(tokio_stream::iter(replies).throttle(Duration::from_millis(200)));
 
@@ -74,20 +73,46 @@ impl MatchFunction for MMFServer {
     }
 }
 
-#[instrument(skip_all, name = "make_matches", level = "trace")]
-fn make_matches() -> Vec<RunResponse> {
-    let mut replies = Vec::new();
+const TICKET_PER_MATCH: usize = 4;
 
-    for i in 1..4 {
-        replies.push(RunResponse {
+#[instrument(skip_all, name = "make_matches", level = "trace")]
+fn make_matches(p: Option<MatchProfile>, tickets: Vec<Ticket>) -> Vec<RunResponse> {
+    let mut matches = Vec::new();
+
+    if p.is_none() {
+        return matches;
+    }
+
+    let mut slice = &tickets[0..];
+    let mut count = 0;
+
+    loop {
+        if slice.len() < TICKET_PER_MATCH {
+            break;
+        }
+
+        let match_ticket = slice[0..TICKET_PER_MATCH].to_vec();
+        slice = &slice[TICKET_PER_MATCH..];
+
+        matches.push(RunResponse {
             proposal: Some(Match {
-                match_id: format!("{}", i),
+                match_id: format!(
+                    "profile-{}-{:?}-{}",
+                    p.as_ref().unwrap().name,
+                    SystemTime::now(),
+                    count
+                ),
+                match_profile: p.as_ref().unwrap().name.clone(),
+                match_function: "basic".to_string(),
+                tickets: match_ticket,
                 ..Default::default()
             }),
         });
+
+        count += 1;
     }
 
-    return replies;
+    return matches;
 }
 
 #[instrument(skip_all, name = "make_server", level = "trace")]
