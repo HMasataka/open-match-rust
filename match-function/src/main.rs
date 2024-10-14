@@ -26,8 +26,10 @@ async fn main() -> Result<(), SpanErr<MatchFunctionError>> {
 
     println!("{}", addr);
 
+    let server = make_server().await?;
+
     Server::builder()
-        .add_service(make_server())
+        .add_service(server)
         .serve(addr)
         .await
         .map_err(MatchFunctionError::FailToService)?;

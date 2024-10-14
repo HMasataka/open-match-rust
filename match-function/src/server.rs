@@ -13,11 +13,23 @@ use tokio_stream::{Stream, StreamExt};
 use tonic::{Request, Response, Status};
 use tracing::instrument;
 
-#[derive(Default)]
-pub struct MMFServer {}
+use crate::err::MatchFunctionError;
+use crate::query::Query;
+
+pub struct MMFServer {
+    query: Query,
+}
 
 type RunResult<T> = Result<Response<T>, Status>;
 type ResponseStream = Pin<Box<dyn Stream<Item = Result<RunResponse, Status>> + Send>>;
+
+impl MMFServer {
+    pub async fn new() -> Result<Self, MatchFunctionError> {
+        let query = Query::new().await?;
+
+        Ok(MMFServer { query })
+    }
+}
 
 #[tonic::async_trait]
 impl MatchFunction for MMFServer {
@@ -69,8 +81,8 @@ fn make_matches() -> Vec<RunResponse> {
 }
 
 #[instrument(skip_all, name = "make_server", level = "trace")]
-pub fn make_server() -> MatchFunctionServer<MMFServer> {
-    let server = MMFServer {};
+pub async fn make_server() -> Result<MatchFunctionServer<MMFServer>, MatchFunctionError> {
+    let server = MMFServer::new().await?;
 
-    return MatchFunctionServer::new(server);
+    Ok(MatchFunctionServer::new(server))
 }
