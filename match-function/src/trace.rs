@@ -6,7 +6,7 @@ use tracing_spanned::SpanErr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 #[instrument(skip_all, name = "initialize_tracing_subscriber", level = "trace")]
-pub fn initialize_tracing_subscriber() -> Result<(), SpanErr<MatchFunctionError>> {
+pub fn initialize_tracing_subscriber() -> Result<(), SpanErr<MatchFunctionError<'static>>> {
     tracing_subscriber::Registry::default()
         .with(
             tracing_subscriber::fmt::layer()

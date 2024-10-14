@@ -17,7 +17,7 @@ use tracing_spanned::SpanErr;
 
 #[tokio::main]
 #[instrument(skip_all, name = "main", level = "trace")]
-async fn main() -> Result<(), SpanErr<MatchFunctionError>> {
+async fn main() -> Result<(), SpanErr<MatchFunctionError<'static>>> {
     initialize_tracing_subscriber()?;
 
     let addr = "[::0]:50502"

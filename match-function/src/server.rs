@@ -2,7 +2,6 @@ use std::pin::Pin;
 use std::time::{Duration, SystemTime};
 
 use crate::openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
-use crate::openmatch::query_service_client::QueryServiceClient;
 use crate::openmatch::{Match, MatchProfile, RunRequest, RunResponse, Ticket};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -21,14 +20,12 @@ type RunResult<T> = Result<Response<T>, Status>;
 type ResponseStream = Pin<Box<dyn Stream<Item = Result<RunResponse, Status>> + Send>>;
 
 impl MMFServer {
-    pub fn new() -> Self {
-        let query = Query::new();
+    pub async fn new() -> Result<Self, MatchFunctionError<'static>> {
+        let query = Query::new().await?;
 
-        MMFServer { query }
+        Ok(MMFServer { query })
     }
 }
-
-const OM_QUERY_ENDPOINT: &str = "http://open-match-query.open-match.svc.cluster.local:50503";
 
 #[tonic::async_trait]
 impl MatchFunction for MMFServer {
@@ -38,13 +35,9 @@ impl MatchFunction for MMFServer {
     async fn run(&self, request: Request<RunRequest>) -> RunResult<Self::RunStream> {
         println!("Got a request from {:?}", request.remote_addr());
 
-        let mut client = QueryServiceClient::connect(OM_QUERY_ENDPOINT)
-            .await
-            .map_err(|_| Status::unknown("create client error"))?;
-
         let tickets = self
             .query
-            .query_pool(&mut client)
+            .query_pool()
             .await
             .map_err(|_| Status::unknown("get tickets error"))?;
 
@@ -116,8 +109,8 @@ fn make_matches(p: Option<MatchProfile>, tickets: Vec<Ticket>) -> Vec<RunRespons
 }
 
 #[instrument(skip_all, name = "make_server", level = "trace")]
-pub async fn make_server() -> Result<MatchFunctionServer<MMFServer>, MatchFunctionError> {
-    let server = MMFServer::new();
+pub async fn make_server() -> Result<MatchFunctionServer<MMFServer>, MatchFunctionError<'static>> {
+    let server = MMFServer::new().await?;
 
     Ok(MatchFunctionServer::new(server))
 }

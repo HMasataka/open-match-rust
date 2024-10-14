@@ -1,21 +1,32 @@
+use std::sync::{Arc, Mutex};
+
 use crate::err::MatchFunctionError;
 use crate::openmatch::{
     query_service_client::QueryServiceClient, Pool, QueryTicketsRequest, TagPresentFilter, Ticket,
 };
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
+use tracing::instrument;
 
-pub struct Query {}
+pub struct Query {
+    client: Arc<Mutex<QueryServiceClient<Channel>>>,
+}
+
+const OM_QUERY_ENDPOINT: &str = "http://open-match-query.open-match.svc.cluster.local:50503";
 
 impl Query {
-    pub fn new() -> Self {
-        Self {}
+    pub async fn new() -> Result<Self, MatchFunctionError<'static>> {
+        let client = QueryServiceClient::connect(OM_QUERY_ENDPOINT)
+            .await
+            .map_err(MatchFunctionError::ClientConnect)?;
+
+        Ok(Self {
+            client: Arc::new(Mutex::new(client)),
+        })
     }
 
-    pub async fn query_pool(
-        &self,
-        client: &mut QueryServiceClient<Channel>,
-    ) -> Result<Vec<Ticket>, MatchFunctionError> {
+    #[instrument(skip_all, name = "query_pool", level = "trace")]
+    pub async fn query_pool(&self) -> Result<Vec<Ticket>, MatchFunctionError> {
         let mode = "mode.demo";
 
         let req = tonic::Request::new(QueryTicketsRequest {
@@ -27,6 +38,12 @@ impl Query {
                 ..Default::default()
             }),
         });
+
+        let mut client = self
+            .client
+            .lock()
+            .map_err(MatchFunctionError::Lock)?
+            .clone();
 
         let mut queries = client
             .query_tickets(req)
