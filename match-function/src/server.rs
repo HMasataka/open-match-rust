@@ -68,7 +68,7 @@ fn make_matches() -> Vec<RunResponse> {
     return replies;
 }
 
-#[instrument(skip_all, name = "make_matches", level = "trace")]
+#[instrument(skip_all, name = "make_server", level = "trace")]
 pub fn make_server() -> MatchFunctionServer<MMFServer> {
     let server = MMFServer {};
 
