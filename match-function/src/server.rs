@@ -1,12 +1,9 @@
-mod openmatch {
-    tonic::include_proto!("openmatch");
-}
-
 use std::pin::Pin;
 use std::time::Duration;
 
-use openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
-use openmatch::{Match, RunRequest, RunResponse};
+use crate::openmatch::match_function_server::{MatchFunction, MatchFunctionServer};
+use crate::openmatch::query_service_client::QueryServiceClient;
+use crate::openmatch::{Match, RunRequest, RunResponse};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
@@ -24,12 +21,14 @@ type RunResult<T> = Result<Response<T>, Status>;
 type ResponseStream = Pin<Box<dyn Stream<Item = Result<RunResponse, Status>> + Send>>;
 
 impl MMFServer {
-    pub async fn new() -> Result<Self, MatchFunctionError> {
-        let query = Query::new().await?;
+    pub fn new() -> Self {
+        let query = Query::new();
 
-        Ok(MMFServer { query })
+        MMFServer { query }
     }
 }
+
+const OM_QUERY_ENDPOINT: &str = "http://open-match-query.open-match.svc.cluster.local:50503";
 
 #[tonic::async_trait]
 impl MatchFunction for MMFServer {
@@ -38,6 +37,17 @@ impl MatchFunction for MMFServer {
     #[instrument(skip_all, name = "run", level = "trace")]
     async fn run(&self, request: Request<RunRequest>) -> RunResult<Self::RunStream> {
         println!("Got a request from {:?}", request.remote_addr());
+
+        let mut client = QueryServiceClient::connect(OM_QUERY_ENDPOINT)
+            .await
+            .map_err(|_| Status::unknown(""))?;
+
+        let tickets = self
+            .query
+            .query_pool(&mut client)
+            .await
+            .map_err(|_| Status::unknown(""))?;
+        println!("{:?}", tickets);
 
         let replies = make_matches();
 
@@ -82,7 +92,7 @@ fn make_matches() -> Vec<RunResponse> {
 
 #[instrument(skip_all, name = "make_server", level = "trace")]
 pub async fn make_server() -> Result<MatchFunctionServer<MMFServer>, MatchFunctionError> {
-    let server = MMFServer::new().await?;
+    let server = MMFServer::new();
 
     Ok(MatchFunctionServer::new(server))
 }
